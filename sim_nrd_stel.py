@@ -11,10 +11,10 @@ dzeta = TWOPI / np_points  # Step size in toroidal angle
 # Parameters for the stellarator
 nperiods = 1
 xnp = float(nperiods)
-e0 = 0.5
-et = 0.5
-ex = -0.31
-wt = 0.15
+e0 = 0.5 # \epsilon_0
+et = 0.5 # \epsilon_t
+ex = -0.31 # \epsilon_x
+iota0 = 0.15 
 Bc = 1.0/np.pi  
 wall_radius = 4
 
@@ -22,12 +22,12 @@ def poincare_section_fieldline(radius=0.5, n_iterations=10000):
     
     def jacobian_psi_t_next(x, *args):
         
-        psi_t, theta, zeta, e0, et, ex, wt = args 
+        psi_t, theta, zeta, e0, et, ex, iota0 = args 
         
         jac = 1 - ( - (
-            (e0 / 4) * (-2*(2 * wt - 1) * np.sin(2 * theta - zeta) - 4 * wt * np.sin(2 * theta)) * 1
-            + (ex / 8) * (-4*(4 * wt - 1) * np.sin(4 * theta - zeta) - 16 * wt * np.sin(4 * theta)) * (2.0*x)
-            + (et / 6) * (-3*(3 * wt - 1) * np.sin(3 * theta - zeta) + 9 * wt * np.sin(3 * theta)) * (1.5*x**(0.5))
+            (e0 / 4) * (-2*(2 * iota0 - 1) * np.sin(2 * theta - zeta) - 4 * iota0 * np.sin(2 * theta)) * 1
+            + (ex / 8) * (-4*(4 * iota0 - 1) * np.sin(4 * theta - zeta) - 16 * iota0 * np.sin(4 * theta)) * (2.0*x)
+            + (et / 6) * (-3*(3 * iota0 - 1) * np.sin(3 * theta - zeta) + 9 * iota0 * np.sin(3 * theta)) * (1.5*x**(0.5))
         ) * dzeta)
         
         return jac
@@ -37,35 +37,35 @@ def poincare_section_fieldline(radius=0.5, n_iterations=10000):
         """
         Function to call for solving the implicit equation for toroidal flux update
         """
-        psi_t, theta, zeta, e0, et, ex, wt = args 
+        psi_t, theta, zeta, e0, et, ex, iota0 = args 
         # print(x)
         f = x - (psi_t - (
-            (e0 / 4) * (-2*(2 * wt - 1) * np.sin(2 * theta - zeta) - 4 * wt * np.sin(2 * theta)) * x
-            + (ex / 8) * (-4*(4 * wt - 1) * np.sin(4 * theta - zeta) - 16 * wt * np.sin(4 * theta)) * x**2.0
-            + (et / 6) * (-3*(3 * wt - 1) * np.sin(3 * theta - zeta) + 9 * wt * np.sin(3 * theta)) * x**(1.5)
+            (e0 / 4) * (-2*(2 * iota0 - 1) * np.sin(2 * theta - zeta) - 4 * iota0 * np.sin(2 * theta)) * x
+            + (ex / 8) * (-4*(4 * iota0 - 1) * np.sin(4 * theta - zeta) - 16 * iota0 * np.sin(4 * theta)) * x**2.0
+            + (et / 6) * (-3*(3 * iota0 - 1) * np.sin(3 * theta - zeta) + 9 * iota0 * np.sin(3 * theta)) * x**(1.5)
         ) * dzeta)
         
         return f
 
-    def hamiltonian_map(psi_t, theta, zeta, e0, et, ex, wt):
+    def hamiltonian_map(psi_t, theta, zeta, e0, et, ex, iota0):
         """
         Hamiltonian map equations for the stellarator.
         Computes the next step in toroidal flux and poloidal angle using the Symplectic Euler method
         """
         # psi_t_next = psi_t - (
-        #     (e0 / 2) * (-(2 * wt - 1) * np.sin(2 * theta - zeta) - 4 * wt * np.sin(2 * theta)) * psi_t
-        #     + (ex / 2) * (-(4 * wt - 1) * np.sin(4 * theta - zeta) - 16 * wt * np.sin(4 * theta)) * psi_t**2.0
-        #     + (et / 2) * (-(3 * wt - 1) * np.sin(3 * theta - zeta) + 9 * wt * np.sin(3 * theta)) * psi_t**(1.5)
+        #     (e0 / 2) * (-(2 * iota0 - 1) * np.sin(2 * theta - zeta) - 4 * iota0 * np.sin(2 * theta)) * psi_t
+        #     + (ex / 2) * (-(4 * iota0 - 1) * np.sin(4 * theta - zeta) - 16 * iota0 * np.sin(4 * theta)) * psi_t**2.0
+        #     + (et / 2) * (-(3 * iota0 - 1) * np.sin(3 * theta - zeta) + 9 * iota0 * np.sin(3 * theta)) * psi_t**(1.5)
         # ) * dzeta
         
 
         psi_t_next = fsolve(solve_psi_t_next, psi_t, fprime=jacobian_psi_t_next, \
-            args=(psi_t, theta, zeta, e0, et, ex, wt), xtol=1.0e-15)
+            args=(psi_t, theta, zeta, e0, et, ex, iota0), xtol=1.0e-15)
 
         theta_next = theta + (      
-            (wt + (e0 / 4) * ((2 * wt - 1) * np.cos(2 * theta - zeta) + 2 * wt * np.cos(2 * theta)))
-            + (ex / 8) * ((4 * wt - 1) * np.cos(4 * theta - zeta) + 4 * wt * np.cos(4 * theta)) * 2 * psi_t_next
-            + (et / 6) * ((3 * wt - 1) * np.cos(3 * theta - zeta) - 3 * wt * np.cos(3 * theta)) * (3/2) * psi_t_next**(0.5)
+            (iota0 + (e0 / 4) * ((2 * iota0 - 1) * np.cos(2 * theta - zeta) + 2 * iota0 * np.cos(2 * theta)))
+            + (ex / 8) * ((4 * iota0 - 1) * np.cos(4 * theta - zeta) + 4 * iota0 * np.cos(4 * theta)) * 2 * psi_t_next
+            + (et / 6) * ((3 * iota0 - 1) * np.cos(3 * theta - zeta) - 3 * iota0 * np.cos(3 * theta)) * (3/2) * psi_t_next**(0.5)
         ) * dzeta 
 
         zeta_next = zeta + dzeta
@@ -98,7 +98,7 @@ def poincare_section_fieldline(radius=0.5, n_iterations=10000):
         for i in range(n_iterations): 
             zeta = zeta_initial        
             while zeta < TWOPI and ~wall_hit_flag:
-                psi_t_next, theta_next, zeta_next = hamiltonian_map(trajectory[-1][0], trajectory[-1][1], zeta, e0, et, ex, wt)
+                psi_t_next, theta_next, zeta_next = hamiltonian_map(trajectory[-1][0], trajectory[-1][1], zeta, e0, et, ex, iota0)
                 zeta = zeta_next
                 trajectory.append((psi_t_next[0], theta_next[0], zeta_next))
                 # print(i, np.mod(zeta, np.pi))
@@ -145,7 +145,7 @@ def poincare_section_fieldline(radius=0.5, n_iterations=10000):
     #     theta_vals = np.array(theta_vals)
     #     x = np.sqrt(psi_t_vals/(np.pi * Bc)) * np.cos(theta_vals)
     #     y = np.sqrt(psi_t_vals/(np.pi * Bc)) * np.sin(theta_vals)
-    #     # plt.plot(theta_vals, np.sqrt(wt_vals), label=f"Radius r={radii[i]:.1f}")
+    #     # plt.plot(theta_vals, np.sqrt(iota0_vals), label=f"Radius r={radii[i]:.1f}")
     #     plt.plot(x, y, label=f"Radius r={radii[i]:.1f}")
 
     # Unzipping the entire phase_data list
@@ -154,7 +154,7 @@ def poincare_section_fieldline(radius=0.5, n_iterations=10000):
     theta_vals = np.array(theta_vals)
     x = np.sqrt(psi_t_vals/(np.pi * Bc)) * np.cos(theta_vals)
     y = np.sqrt(psi_t_vals/(np.pi * Bc)) * np.sin(theta_vals)
-    # plt.plot(theta_vals, np.sqrt(wt_vals), label=f"Radius r={radii[i]:.1f}")
+    # plt.plot(theta_vals, np.sqrt(iota0_vals), label=f"Radius r={radii[i]:.1f}")
     plt.plot(x, y, '.r', markersize = 1, label=f"r={r:.4f}")
 
     # plt.xlabel("Poloidal Angle \u03b8 (radians)")
@@ -178,7 +178,7 @@ def poincare_section_fieldline(radius=0.5, n_iterations=10000):
     theta_vals = np.array(theta_vals)
     x = np.sqrt(psi_t_vals/(np.pi * Bc)) * np.cos(theta_vals)
     y = np.sqrt(psi_t_vals/(np.pi * Bc)) * np.sin(theta_vals)
-    # plt.plot(theta_vals, np.sqrt(wt_vals), label=f"Radius r={radii[i]:.1f}")
+    # plt.plot(theta_vals, np.sqrt(iota0_vals), label=f"Radius r={radii[i]:.1f}")
     plt.plot(x, y, '.r', markersize = 1, label=f"r={r:.4f}")
 
     # plt.xlabel("Poloidal Angle \u03b8 (radians)")
