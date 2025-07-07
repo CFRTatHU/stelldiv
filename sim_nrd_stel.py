@@ -1,4 +1,5 @@
 import sys
+import time
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.optimize import fsolve, root_scalar
@@ -17,6 +18,16 @@ ex = -0.31 # \epsilon_x
 iota0 = 0.15 
 Bc = 1.0/np.pi  
 wall_radius = 4
+
+def connection_length(trajectory):
+    """
+    Returns the connection length of a trajectory starting at the initial point: psi0, theta0, zeta0
+    
+    formula: computes the length over a single iterate of the initial point or between the initial point
+    and before the fieldline strikes the wall. 
+    """
+    return Lc
+
 
 def poincare_section_fieldline(radius=0.5, n_iterations=10000):
     
@@ -60,8 +71,12 @@ def poincare_section_fieldline(radius=0.5, n_iterations=10000):
         
 
         psi_t_next = fsolve(solve_psi_t_next, psi_t, fprime=jacobian_psi_t_next, \
-            args=(psi_t, theta, zeta, e0, et, ex, iota0), xtol=1.0e-15)
+            args=(psi_t, theta, zeta, e0, et, ex, iota0), xtol=1.0e-10)
 
+        # sol = root_scalar(solve_psi_t_next, args=(psi_t, theta, zeta, e0, et, ex, iota0), method='newton', \
+        #     fprime=jacobian_psi_t_next, x0=psi_t, xtol=1.0e-15)
+        # psi_t_next = sol.root
+        
         theta_next = theta + (      
             (iota0 + (e0 / 4) * ((2 * iota0 - 1) * np.cos(2 * theta - zeta) + 2 * iota0 * np.cos(2 * theta)))
             + (ex / 8) * ((4 * iota0 - 1) * np.cos(4 * theta - zeta) + 4 * iota0 * np.cos(4 * theta)) * 2 * psi_t_next
@@ -74,8 +89,6 @@ def poincare_section_fieldline(radius=0.5, n_iterations=10000):
         return psi_t_next, theta_next, zeta_next
 
     # Initial conditions
-    # radii = [0.7, 1.0, 1.3]  # Example radii for phase portraits
-    # radii = [0.86]
     radii = [radius]
     zeta_initial = 0.0
     theta_initial = 0.0
@@ -85,6 +98,8 @@ def poincare_section_fieldline(radius=0.5, n_iterations=10000):
     wall_hit_flag = False
     phase_data = []
     phase_data_zeta_pi = []
+    
+    start_time = time.time()
     
     for r in radii:
         psi_t = np.pi * r**2 * Bc # Toroidal flux
@@ -101,13 +116,15 @@ def poincare_section_fieldline(radius=0.5, n_iterations=10000):
                 psi_t_next, theta_next, zeta_next = hamiltonian_map(trajectory[-1][0], trajectory[-1][1], zeta, e0, et, ex, iota0)
                 zeta = zeta_next
                 trajectory.append((psi_t_next[0], theta_next[0], zeta_next))
-                # print(i, np.mod(zeta, np.pi))
 
+                # print(psi_t_next, theta_next)
+                
                 # check if the next iterate falls outside the vessel wall
-                x_next = np.sqrt(psi_t_next[0] / (np.pi * Bc))*np.cos(theta_next[0])
-                y_next = np.sqrt(psi_t_next[0] / (np.pi * Bc))*np.sin(theta_next[0])
-                if x_next**2 + y_next*2 > wall_radius**2:
-                    print(f"For radius = {r:.4f}, field line hits the vessel wall after {i:4d} iterations")
+                # x_next = np.sqrt(psi_t_next[0] / (np.pi * Bc))*np.cos(theta_next[0])
+                # y_next = np.sqrt(psi_t_next[0] / (np.pi * Bc))*np.sin(theta_next[0])
+                # if x_next**2 + y_next**2 > wall_radius**2:
+                if np.sqrt(psi_t_next[0] / (np.pi * Bc)) > wall_radius:
+                    print(f"For radius = {r:.4f}, field line hits the wall after {i:4d} iterations")
                     wall_hit_flag = True
                     break
                    
@@ -136,6 +153,9 @@ def poincare_section_fieldline(radius=0.5, n_iterations=10000):
         # np.savetxt(f"trajectory_r={r:.2f}.txt", np.array(trajectory).squeeze(), \
         #     fmt='%.18e', delimiter=' ', newline='\n')
         print(f"Saved file for radius = {r:.4f}")
+
+    end_time = time.time()
+    print("Time taken %s seconds"%(end_time - start_time))
 
     # Plot Phase Portraits
     plt.figure(figsize=(10, 6))
